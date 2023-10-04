@@ -1,0 +1,144 @@
+<div class="container">
+	<div class="page-heading">
+	</div>
+<div>
+	<div class="">
+	</div>
+	{% assign currentTime = now | date_add_hours : 24 | date: "yyyy-MM-dd HH:mm:ss" %}
+	{% assign latestMembershipId = user.cim_latestmembershipid.id %}
+
+	{% if latestMembershipId %}
+	{% fetchxml membership %}
+		<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+		  <entity name="cim_membership">
+			<attribute name="cim_membershipid" />
+			<attribute name="cim_name" />
+			<attribute name="statuscode" />
+			<attribute name="cim_gradeid" />
+			<attribute name="cim_renewaldate" />
+			<attribute name="cim_contactid" />
+						<attribute name="cim_related_membershipid" />
+			<attribute name="cim_orderid" />
+			<order attribute="cim_renewaldate" descending="true" />
+			<order attribute="cim_contactid" descending="false" />
+			<filter type="and">
+			  <condition attribute="cim_membershipid" operator="eq" value="{{ latestMembershipId }}" />
+			  <condition attribute="createdon" operator="le" value='{{ currentTime }}' />
+			</filter>
+		  </entity>
+		</fetch>
+	{% endfetchxml %}
+
+	{% for item in membership.results.entities %}
+		{% assign status = item.statuscode  %}
+		{% assign relatedMembershipId = item.cim_related_membershipid.id %}
+	{% endfor %}
+
+	  <script type="text/javascript">
+    document.onreadystatechange = function () 
+		{
+        debugger;      
+        var relatedMembershipId = "{{ relatedMembershipId }}";            
+        console.log("relatedMembershipId is " + relatedMembershipId);
+       
+      }
+  </script>
+
+	{% if status.value == 1 %}
+
+	{% if relatedMembershipId %}
+	
+			{% fetchxml relatedMembership %}
+				<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+					<entity name="cim_membership">
+						<attribute name="cim_name" />
+						<attribute name="statuscode" />
+						<attribute name="cim_membershipid" />
+					<filter type="and">
+						<condition attribute="cim_membershipid" operator="eq" value="{{ relatedMembershipId }}" />
+					</filter>
+					</entity>
+				</fetch>
+			{% endfetchxml %}
+
+				{% for relatedItem in relatedMembership.results.entities %}
+				{% assign relatedStatus = relatedItem.statuscode.value %}			
+				{% assign membershipid = relatedItem.cim_membershipid %}
+				{% endfor %}
+
+					  <script type="text/javascript">
+    				document.onreadystatechange = function () 
+			{
+        debugger;      
+        var membershipid = "{{ membershipid }}";            
+        var relatedStatus = "{{ relatedStatus }}";            
+        console.log("membershipid is " + membershipid);
+        console.log("relatedStatus is " + relatedStatus);
+       
+      }
+  			</script>
+
+				{% if relatedStatus == 912730001 or relatedStatus.value == 912730002 %}
+			<div class="alert alert-danger">The benefit is available to current and renewed members only.</div>
+
+				{% endif %}
+
+				{% endif %}
+
+				{% else %}
+
+		{% fetchxml moodlecourses %}
+			<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+			  <entity name="cim_moodlecourseredemption">
+				<attribute name="cim_moodlecourseredemptionid" />
+				<attribute name="cim_name" />
+				<attribute name="createdon" />
+				<attribute name="cim_contactid" />
+				<attribute name="cim_moodlecourseid" />
+				<attribute name="cim_membershipid" />
+				<attribute name="statuscode" />
+				<attribute name="cim_requestmonth" />
+				<attribute name="cim_moodleuserid" />
+				<attribute name="cim_enddate" />
+				<order attribute="cim_name" descending="false" />
+				<filter type="and">
+				<condition attribute="cim_membershipid" operator="eq" value="{{ latestMembershipId }}" />
+					<condition attribute="createdon" operator="le" value='{{ currentTime }}' />
+				<condition attribute="cim_contactid" operator="eq" value="{{ user.id }}" />
+				</filter>
+			  </entity>
+			</fetch>
+		{% endfetchxml %}
+		{% assign count = 0  %}
+		{% for item in moodlecourses.results.entities %}
+		  {% assign count = 1  %}
+		{% endfor %}
+		{% if count == 0 %}
+			{% if page.adx_entityform %}
+				<h3>Free online training course</h3>
+				<p>As a graded member you can choose from one of the four training courses below and gain 90 days access to complete this.</p>
+				<ol>
+					<li>Marketing and Brand Strategy: aimed at marketers looking to develop their strategic marketing planning skills and become more equipped to respond to changing business challenges.</li>
+					<li>Marketing Fundamentals: helping to develop skills and knowledge needed to plan and measure an effective marketing communications campaign and to develop other core fundamental marketing principles.</li>
+					<li>Planning and Optimising Marketing Campaigns: providing insight on effective campaign planning and execution as well as understanding and evaluating performance.</li>
+					<li>Copywriting - The Complete Guide: aimed at marketers who want to become a more versatile copywriter and take their copywriting skills to the next level.</li>
+				</ol>
+				<p>Upon successful completion of the course, you will be able to download a digital certificate that you can use towards your Continued Professional Development (CPD) for the year, as all courses are CPD eligible</p>
+					<p>Select the course and when you would like your access to begin below.</p>
+				{% entityform id: page.adx_entityform.id %}
+			{% endif %}
+		{% else %}
+			<div class="alert alert-danger">As you have redeemed a course for this membership year already you can access this using the log in details emailed to you. Next year you will be able to select another course to redeem upon renewal. If you have any questions, you can contact us on +44(0)1628 427120 (Mon-Fri 08:00-18:00) or at <a href="mailto:membership@cim.co.uk">membership@cim.co.uk</a>.</div>
+		{% endif %}
+	{% else %}
+		<div class="alert alert-danger"> This benefit is available to current members only. </div>
+	{% endif %}
+</div>
+{% else %}
+<div class="alert alert-danger"> This benefit is available to current members only. </div>
+{% endif %}
+<script>
+$(document).ready(function () {
+  var status='{{ status.value }}';
+});
+</script>
